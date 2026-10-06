@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cstdbool>
-
 namespace driver {
 
 class IGpio {

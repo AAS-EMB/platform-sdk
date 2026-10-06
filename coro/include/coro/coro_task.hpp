@@ -1,7 +1,8 @@
 #pragma once
 #include <coroutine>
-#include <memory_resource>
+#include <exception>
 #include <functional>
+#include <memory_resource>
 
 namespace driver::async {
 
@@ -35,7 +36,8 @@ struct coro_task {
             #if defined(PLATFORM_HOST)
                 coro_task::get_resource()->deallocate(ptr, size, alignof(promise_type));
             #else
-                (void)ptr; (void)size;
+                (void)ptr;
+                (void)size;
                 std::terminate();
             #endif
         }

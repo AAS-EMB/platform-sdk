@@ -1,7 +1,9 @@
 #pragma once
 
-#include <cstdint>
+#include <atomic>
 #include <chrono>
+#include <cstdint>
+#include <limits>
 #if defined(PLATFORM_STM32F1)
     #include "stm32f1xx.h"
 #elif defined(PLATFORM_STM32F3)
@@ -13,6 +15,9 @@
 namespace driver {
 
 struct chrono_traits {
+    static_assert(std::atomic<uint32_t>::is_always_lock_free,
+                  "SysTick counters must use lock-free atomics in the ISR");
+
     static inline std::chrono::nanoseconds wall_offset{};
 
     static void init() noexcept {
@@ -24,9 +29,9 @@ struct chrono_traits {
         uint32_t h1 = 0u, l = 0u, h2 = 0u;
 
         do {
-            h1 = wall_high;
-            l  = wall_low;
-            h2 = wall_high;
+            h1 = wall_high.load(std::memory_order_relaxed);
+            l  = wall_low.load(std::memory_order_relaxed);
+            h2 = wall_high.load(std::memory_order_relaxed);
         } while (h1 not_eq h2);
 
         auto ms = (static_cast<uint64_t>(h1) << 32) | l;
@@ -41,15 +46,16 @@ struct chrono_traits {
     }
 
     static void systick_irq() noexcept {
-        if (++wall_low == 0u) {
-            ++wall_high;
+        if (wall_low.fetch_add(1u, std::memory_order_relaxed) ==
+            std::numeric_limits<uint32_t>::max()) {
+            wall_high.fetch_add(1u, std::memory_order_relaxed);
         }
     }
 
 private:
     // ---------- SysTick (wall time) ----------
-    static inline volatile uint32_t wall_low  = 0u;
-    static inline volatile uint32_t wall_high = 0u;
+    static inline std::atomic<uint32_t> wall_low{0u};
+    static inline std::atomic<uint32_t> wall_high{0u};
 
     static void init_systick() noexcept {
         SysTick->LOAD = SystemCoreClock / 1000u - 1u;

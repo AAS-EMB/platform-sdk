@@ -9,7 +9,7 @@ struct chrono_traits {
 
     static std::chrono::nanoseconds monotonic_ticks() noexcept {
         using namespace std::chrono;
-        return steady_clock::now().time_since_epoch()
+        return steady_clock::now().time_since_epoch();
     }
 
     static std::chrono::nanoseconds wall_ticks() noexcept {

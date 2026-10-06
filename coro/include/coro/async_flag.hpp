@@ -1,6 +1,5 @@
 #pragma once
 #include <coroutine>
-#include <cstdbool>
 #include <cassert>
 
 namespace driver::async {
